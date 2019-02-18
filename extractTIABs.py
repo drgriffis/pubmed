@@ -52,6 +52,8 @@ def argparser():
                     help='Map text to ASCII')
     ap.add_argument('-i', '--ids', metavar='FILE', default=None,
                     help='Only process citations with IDs in FILE.')
+    ap.add_argument('-sk', '--skip-ids', metavar='FILE', default=None,
+                    help='Skip citations with IDs in FILE.')
     ap.add_argument('-j', '--json', default=False, action='store_true',
                     help='Output JSON')
     ap.add_argument('-ha', '--has-abstract', default=False, action='store_true',
@@ -512,6 +514,9 @@ def skip_pmid(PMID, options):
     elif options.ids is not None and PMID not in options.ids:
         info('skipping %d (not in given IDs)' % PMID)
         return True
+    elif options.skip_ids is not None and PMID in options.skip_ids:
+        info('skipping %d (in list of IDs to skip)' % PMID)
+        return True
     else:
         return False
 
@@ -721,6 +726,8 @@ def process_options(argv):
         options.PMID_lower_than = int(options.PMID_lower_than)
     if options.ids is not None:
         options.ids = read_ids(options.ids)
+    if options.skip_ids is not None:
+        options.skip_ids = read_ids(options.skip_ids)
     return options
 
 def main(argv):
