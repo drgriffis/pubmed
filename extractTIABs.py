@@ -11,7 +11,7 @@ import tarfile
 import json
 
 from time import time
-from StringIO import StringIO
+from io import StringIO
 from collections import OrderedDict, namedtuple
 from logging import error, warn, info
 
@@ -22,7 +22,7 @@ try:
 except ImportError:
     import cElementTree as ET
 
-utf8_stdout = codecs.getwriter('utf8')(sys.stdout)
+#utf8_stdout = codecs.getwriter('utf8')(sys.stdout)
 
 output_count, skipped_count = 0, 0
 
@@ -175,7 +175,7 @@ class Citation(object):
         for a in abstractTexts:
             try:
                 sections.append(AbstractSection.from_xml(a, PMID))
-            except EmptySection, e:
+            except EmptySection as e:
                 warn(str(e))
         mesh_headings = find_mesh_headings(element, PMID)
         mesh = [MeshHeading.from_xml(h) for h in mesh_headings]
@@ -545,14 +545,14 @@ def write_to_ascii_statistics(out=sys.stderr):
     from unicode2ascii import missing_mapping
     if not missing_mapping:
         return    # nothing missing
-    print >> out, "Characters without mapping\t%d" % sum(missing_mapping.values())
+    out.write("Characters without mapping\t%d\n" % sum(missing_mapping.values()))
     sk = missing_mapping.keys()
     sk.sort(lambda a,b : cmp(missing_mapping[b],missing_mapping[a]))
     for c in sk:
         try:
-            print >> out, "\t%.4X\t%s\t%d" % (ord(c), c.encode("utf-8"), missing_mapping[c])
+            out.write("\t%.4X\t%s\t%d\n" % (ord(c), c.encode("utf-8"), missing_mapping[c]))
         except:
-            print >> out, "\t%.4X\t?\t%d" % (ord(c), missing_mapping[c])
+            out.write("\t%.4X\t?\t%d\n" % (ord(c), missing_mapping[c]))
 
 def citation_to_ascii(citation):
     """Map citation text content to ASCII"""
@@ -603,7 +603,12 @@ def write_citation(directory, name, outfile, citation, options):
         text = json.dumps(citation.to_dict(options), sort_keys=True,
                           indent=2, separators=(',', ': '))
     if directory is None:
-        print >> utf8_stdout, text
+        # can't get this to work correctly with Python3, but default
+        # output encoding is UTF-8, so relying on that
+        #utf8_stdout.write(text.encode('utf-8'))
+        #utf8_stdout.write('\n')
+        sys.stdout.write(text)
+        sys.stdout.write('\n')
     else:
         suffix = '.txt' if not options.json else '.json'
         fn = os.path.join(directory, citation.PMID+suffix)
@@ -612,7 +617,7 @@ def write_citation(directory, name, outfile, citation, options):
                               os.path.basename(fn))
             save_in_tar(outfile, fn, text)
         else:
-            with codecs.open(fn, 'wt', encoding='utf-8') as out:
+            with codecs.open(fn, 'w', encoding='utf-8') as out:
                 out.write(text)
 
 def strip_extensions(fn):
@@ -636,7 +641,7 @@ def make_output_directory(fn, options):
             return directory
     try:
         os.makedirs(directory)
-    except OSError, e:
+    except OSError as e:
         error('Failed to create %s: %s' % (directory, str(e)))
         raise
     return directory
@@ -735,8 +740,8 @@ def main(argv):
     if options.ascii:
         write_to_ascii_statistics(sys.stderr)
 
-    print >> sys.stderr, 'Done. Output data for %d PMIDs, skipped %d.' % (
-        output_count, skipped_count)
+    sys.stderr.write('Done. Output data for {0:,} PMIDs, skipped {1:,}.\n'.format(
+        output_count, skipped_count))
 
     return 0
 
